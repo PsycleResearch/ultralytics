@@ -3,7 +3,7 @@
 import json
 from time import time
 
-from ultralytics.hub.utils import HUB_WEB_ROOT, PREFIX, events
+from ultralytics.hub.utils import HUB_WEB_ROOT, PREFIX
 from ultralytics.utils import LOGGER, SETTINGS
 
 
@@ -58,22 +58,22 @@ def on_train_end(trainer):
 
 def on_train_start(trainer):
     """Run events on train start."""
-    events(trainer.args)
+    
 
 
 def on_val_start(validator):
     """Runs events on validation start."""
-    events(validator.args)
+    
 
 
 def on_predict_start(predictor):
     """Run events on predict start."""
-    events(predictor.args)
+    
 
 
 def on_export_start(exporter):
     """Run events on export start."""
-    events(exporter.args)
+    
 
 
 callbacks = {
