@@ -338,9 +338,15 @@ class LoadImages:
         else:
             # Read image
             self.count += 1
-            im0 = cv2.imread(path)  # BGR
+            im0 = cv2.imread(path, cv2.IMREAD_UNCHANGED)  # BGR
             if im0 is None:
                 raise FileNotFoundError(f'Image Not Found {path}')
+            
+            if len(im0.shape) < 3:
+                im0 = cv2.cvtColor(im0, cv2.COLOR_GRAY2BGR)
+            # if im0.dtype == np.uint16:
+            #     im0 = im0.astype(np.int32)
+
             s = f'image {self.count}/{self.nf} {path}: '
 
         return [path], [im0], self.cap, s
