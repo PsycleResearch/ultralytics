@@ -159,8 +159,8 @@ class BaseDataset(Dataset):
             
             if len(im.shape) < 3:
                 im = cv2.cvtColor(im, cv2.COLOR_GRAY2BGR)
-            # if im.dtype == np.uint16:
-            #     im = im.astype(np.int32)
+            if im.dtype == np.uint16:
+                im = im.astype(np.int32)
 
             h0, w0 = im.shape[:2]  # orig hw
             if rect_mode:  # resize long side to imgsz while maintaining aspect ratio

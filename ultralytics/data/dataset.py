@@ -253,8 +253,8 @@ class ClassificationDataset(torchvision.datasets.ImageFolder):
 
         if len(im.shape) < 3:
             im = cv2.cvtColor(im, cv2.COLOR_GRAY2BGR)
-        # if im.dtype == np.uint16:
-        #     im = im.astype(np.int32)
+        if im.dtype == np.uint16:
+            im = im.astype(np.int32)
         
         if self.album_transforms:
             sample = self.album_transforms(image=cv2.cvtColor(im, cv2.COLOR_BGR2RGB))['image']
