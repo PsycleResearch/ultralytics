@@ -178,7 +178,7 @@ class Mosaic(BaseMixTransform):
 
             # Place img in img4
             if i == 0:  # top left
-                img4 = np.full((s * 2, s * 2, img.shape[2]), 114, dtype=np.uint8)  # base image with 4 tiles
+                img4 = np.full((s * 2, s * 2, img.shape[2]), 114, dtype=img.dtype)  # base image with 4 tiles
                 x1a, y1a, x2a, y2a = max(xc - w, 0), max(yc - h, 0), xc, yc  # xmin, ymin, xmax, ymax (large image)
                 x1b, y1b, x2b, y2b = w - (x2a - x1a), h - (y2a - y1a), w, h  # xmin, ymin, xmax, ymax (small image)
             elif i == 1:  # top right
@@ -214,7 +214,7 @@ class Mosaic(BaseMixTransform):
 
             # Place img in img9
             if i == 0:  # center
-                img9 = np.full((s * 3, s * 3, img.shape[2]), 114, dtype=np.uint8)  # base image with 4 tiles
+                img9 = np.full((s * 3, s * 3, img.shape[2]), 114, dtype=img.dtype)  # base image with 4 tiles
                 h0, w0 = h, w
                 c = s, s, s + w, s + h  # xmin, ymin, xmax, ymax (base) coordinates
             elif i == 1:  # top
@@ -296,7 +296,7 @@ class MixUp(BaseMixTransform):
         """Applies MixUp augmentation as per https://arxiv.org/pdf/1710.09412.pdf."""
         r = np.random.beta(32.0, 32.0)  # mixup ratio, alpha=beta=32.0
         labels2 = labels['mix_labels'][0]
-        labels['img'] = (labels['img'] * r + labels2['img'] * (1 - r)).astype(np.uint8)
+        labels['img'] = (labels['img'] * r + labels2['img'] * (1 - r)).astype(labels['img'].dtype)
         labels['instances'] = Instances.concatenate([labels['instances'], labels2['instances']], axis=0)
         labels['cls'] = np.concatenate([labels['cls'], labels2['cls']], 0)
         return labels
@@ -752,7 +752,7 @@ class CopyPaste:
         if self.p and len(instances.segments):
             n = len(instances)
             _, w, _ = im.shape  # height, width, channels
-            im_new = np.zeros(im.shape, np.uint8)
+            im_new = np.zeros(im.shape, im.dtype)
 
             # Calculate ioa first then select indexes randomly
             ins_flip = deepcopy(instances)
