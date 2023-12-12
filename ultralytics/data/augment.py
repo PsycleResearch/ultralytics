@@ -296,7 +296,7 @@ class MixUp(BaseMixTransform):
         """Applies MixUp augmentation as per https://arxiv.org/pdf/1710.09412.pdf."""
         r = np.random.beta(32.0, 32.0)  # mixup ratio, alpha=beta=32.0
         labels2 = labels['mix_labels'][0]
-        labels['img'] = (labels['img'] * r + labels2['img'] * (1 - r)).astype(labels['img'].dtype)
+        labels['img'] = (labels['img'] * r + labels2['img'] * (1 - r)).astype(np.uint8)
         labels['instances'] = Instances.concatenate([labels['instances'], labels2['instances']], axis=0)
         labels['cls'] = np.concatenate([labels['cls'], labels2['cls']], 0)
         return labels
@@ -752,7 +752,7 @@ class CopyPaste:
         if self.p and len(instances.segments):
             n = len(instances)
             _, w, _ = im.shape  # height, width, channels
-            im_new = np.zeros(im.shape, im.dtype)
+            im_new = np.zeros(im.shape, np.uint8)
 
             # Calculate ioa first then select indexes randomly
             ins_flip = deepcopy(instances)
