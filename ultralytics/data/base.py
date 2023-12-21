@@ -159,8 +159,6 @@ class BaseDataset(Dataset):
             
             if len(im.shape) < 3:
                 im = cv2.cvtColor(im, cv2.COLOR_GRAY2BGR)
-            if im.dtype == np.uint16:
-                im = im.astype(np.int32)
 
             h0, w0 = im.shape[:2]  # orig hw
             if rect_mode:  # resize long side to imgsz while maintaining aspect ratio
@@ -170,6 +168,10 @@ class BaseDataset(Dataset):
                     im = cv2.resize(im, (w, h), interpolation=cv2.INTER_LINEAR)
             elif not (h0 == w0 == self.imgsz):  # resize by stretching image to square imgsz
                 im = cv2.resize(im, (self.imgsz, self.imgsz), interpolation=cv2.INTER_LINEAR)
+
+            # Change dtype after resize: cv2 doesn't support resizing int32 images
+            if im.dtype == np.uint16:
+                im = im.astype(np.int32)
 
             # Add to buffer if training with augmentations
             if self.augment:
