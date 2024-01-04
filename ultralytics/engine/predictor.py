@@ -120,6 +120,10 @@ class BasePredictor:
             im = np.stack(self.pre_transform(im))
             im = im[..., ::-1].transpose((0, 3, 1, 2))  # BGR to RGB, BHWC to BCHW, (n, 3, h, w)
             im = np.ascontiguousarray(im)  # contiguous
+            if im.dtype == np.uint16:
+                # Torch doesn't accept uint16 format. To keep precision, we convert
+                # to int32
+                im = im.astype(np.int32)
             im = torch.from_numpy(im)
 
         im = im.to(self.device)
