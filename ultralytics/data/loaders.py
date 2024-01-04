@@ -344,8 +344,6 @@ class LoadImages:
             
             if len(im0.shape) < 3:
                 im0 = cv2.cvtColor(im0, cv2.COLOR_GRAY2BGR)
-            # if im0.dtype == np.uint16:
-            #     im0 = im0.astype(np.int32)
 
             s = f'image {self.count}/{self.nf} {path}: '
 

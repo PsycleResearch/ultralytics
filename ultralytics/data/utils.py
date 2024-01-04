@@ -592,8 +592,6 @@ def compress_one_image(f, f_new=None, max_dim=1920, quality=50):
         
         if len(im.shape) < 3:
             im = cv2.cvtColor(im, cv2.COLOR_GRAY2BGR)
-        # if im.dtype == np.uint16:
-        #     im = im.astype(np.int32)
 
         im_height, im_width = im.shape[:2]
         r = max_dim / max(im_height, im_width)  # ratio

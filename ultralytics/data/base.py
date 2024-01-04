@@ -169,10 +169,6 @@ class BaseDataset(Dataset):
             elif not (h0 == w0 == self.imgsz):  # resize by stretching image to square imgsz
                 im = cv2.resize(im, (self.imgsz, self.imgsz), interpolation=cv2.INTER_LINEAR)
 
-            # Change dtype after resize: cv2 doesn't support resizing int32 images
-            # if im.dtype == np.uint16:
-            #     im = im.astype(np.int32)
-
             # Add to buffer if training with augmentations
             if self.augment:
                 self.ims[i], self.im_hw0[i], self.im_hw[i] = im, (h0, w0), im.shape[:2]  # im, hw_original, hw_resized

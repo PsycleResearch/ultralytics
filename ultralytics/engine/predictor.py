@@ -135,8 +135,8 @@ class BasePredictor:
         return self.model(im, augment=self.args.augment, visualize=visualize)
 
     def pre_type_conversion(self, im):
-        # if im.dtype == np.uint16:
-        #     return im.astype(np.int32) 
+        if im.dtype == np.uint16:
+            return im.astype(np.int32) 
         
         return im
 
