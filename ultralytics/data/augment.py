@@ -570,7 +570,8 @@ class RandomHSV:
         The modified image replaces the original image in the input 'labels' dict.
         """
         img = labels['img']
-        if self.hgain or self.sgain or self.vgain:
+        # HSV augment for uint16 is not valid (0 - 65535 instead of 0 - 255)
+        if (self.hgain or self.sgain or self.vgain) and img.dtype != np.uint16:
             r = np.random.uniform(-1, 1, 3) * [self.hgain, self.sgain, self.vgain] + 1  # random gains
             hue, sat, val = cv2.split(cv2.cvtColor(img, cv2.COLOR_BGR2HSV))
             dtype = img.dtype  # uint8
@@ -898,6 +899,12 @@ class Format:
         if len(img.shape) < 3:
             img = np.expand_dims(img, -1)
         img = np.ascontiguousarray(img.transpose(2, 0, 1)[::-1])
+        
+        # Torch doesn't accept uint16 format. To keep precision, we convert
+        # to int32
+        if img.dtype == np.uint16:
+            img = img.astype(np.int32)
+
         img = torch.from_numpy(img)
         return img
 
