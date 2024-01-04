@@ -239,8 +239,8 @@ def convert_dota_to_yolo_obb(dota_root_path: str):
             
             if len(img.shape) < 3:
                 img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-            if img.dtype == np.uint16:
-                img = img.astype(np.int32)
+            # if img.dtype == np.uint16:
+            #     img = img.astype(np.int32)
 
             h, w = img.shape[:2]
             convert_label(image_name_without_ext, w, h, orig_label_dir, save_dir)
