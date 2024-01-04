@@ -134,6 +134,12 @@ class BasePredictor:
                                    mkdir=True) if self.args.visualize and (not self.source_type.tensor) else False
         return self.model(im, augment=self.args.augment, visualize=visualize)
 
+    def pre_type_conversion(self, im):
+        if im.dtype == np.uint16:
+            return im.astype(np.int32) 
+        
+        return im
+
     def pre_transform(self, im):
         """
         Pre-transform input image before inference.
@@ -146,7 +152,7 @@ class BasePredictor:
         """
         same_shapes = all(x.shape == im[0].shape for x in im)
         letterbox = LetterBox(self.imgsz, auto=same_shapes and self.model.pt, stride=self.model.stride)
-        return [letterbox(image=x) for x in im]
+        return [self.pre_type_conversion(letterbox(image=x)) for x in im]
 
     def write_results(self, idx, results, batch):
         """Write inference results to a file or directory."""

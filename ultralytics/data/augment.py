@@ -178,7 +178,7 @@ class Mosaic(BaseMixTransform):
 
             # Place img in img4
             if i == 0:  # top left
-                img4 = np.full((s * 2, s * 2, img.shape[2]), 114, dtype=np.uint8)  # base image with 4 tiles
+                img4 = np.full((s * 2, s * 2, img.shape[2]), 114, dtype=img.dtype)  # base image with 4 tiles
                 x1a, y1a, x2a, y2a = max(xc - w, 0), max(yc - h, 0), xc, yc  # xmin, ymin, xmax, ymax (large image)
                 x1b, y1b, x2b, y2b = w - (x2a - x1a), h - (y2a - y1a), w, h  # xmin, ymin, xmax, ymax (small image)
             elif i == 1:  # top right
@@ -214,7 +214,7 @@ class Mosaic(BaseMixTransform):
 
             # Place img in img9
             if i == 0:  # center
-                img9 = np.full((s * 3, s * 3, img.shape[2]), 114, dtype=np.uint8)  # base image with 4 tiles
+                img9 = np.full((s * 3, s * 3, img.shape[2]), 114, dtype=img.dtype)  # base image with 4 tiles
                 h0, w0 = h, w
                 c = s, s, s + w, s + h  # xmin, ymin, xmax, ymax (base) coordinates
             elif i == 1:  # top
@@ -570,7 +570,8 @@ class RandomHSV:
         The modified image replaces the original image in the input 'labels' dict.
         """
         img = labels['img']
-        if self.hgain or self.sgain or self.vgain:
+        # HSV augment for uint16 is not valid (0 - 65535 instead of 0 - 255)
+        if (self.hgain or self.sgain or self.vgain) and img.dtype != np.uint16:
             r = np.random.uniform(-1, 1, 3) * [self.hgain, self.sgain, self.vgain] + 1  # random gains
             hue, sat, val = cv2.split(cv2.cvtColor(img, cv2.COLOR_BGR2HSV))
             dtype = img.dtype  # uint8
@@ -898,6 +899,12 @@ class Format:
         if len(img.shape) < 3:
             img = np.expand_dims(img, -1)
         img = np.ascontiguousarray(img.transpose(2, 0, 1)[::-1])
+        
+        # Torch doesn't accept uint16 format. To keep precision, we convert
+        # to int32
+        if img.dtype == np.uint16:
+            img = img.astype(np.int32)
+
         img = torch.from_numpy(img)
         return img
 
