@@ -1,6 +1,7 @@
 # Ultralytics YOLO 🚀, AGPL-3.0 license
 
 import torch
+import numpy as np
 
 from ultralytics.engine.predictor import BasePredictor
 from ultralytics.engine.results import Results
@@ -32,6 +33,10 @@ class ClassificationPredictor(BasePredictor):
 
     def preprocess(self, img):
         """Converts input image to model-compatible data type."""
+        if isinstance(img, np.array) and img.dtype == np.uint16:
+            # Torch doesn't accept uint16 format. To keep precision, we convert
+            # to int32
+            img = img.astype(np.int32)
         if not isinstance(img, torch.Tensor):
             img = torch.stack([self.transforms(im) for im in img], dim=0)
         img = (img if isinstance(img, torch.Tensor) else torch.from_numpy(img)).to(self.model.device)

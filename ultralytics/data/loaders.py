@@ -115,7 +115,7 @@ class LoadStreams:
                 if n % self.vid_stride == 0:
                     success, im = cap.retrieve()
                     if not success:
-                        im = np.zeros(self.shape[i], dtype=np.uint8)
+                        im = np.zeros(self.shape[i], dtype=im.dtype)
                         LOGGER.warning('WARNING ⚠️ Video stream unresponsive, please check your IP camera connection.')
                         cap.open(stream)  # re-open stream if signal was lost
                     if self.buffer:
@@ -338,9 +338,13 @@ class LoadImages:
         else:
             # Read image
             self.count += 1
-            im0 = cv2.imread(path)  # BGR
+            im0 = cv2.imread(path, cv2.IMREAD_UNCHANGED)  # BGR
             if im0 is None:
                 raise FileNotFoundError(f'Image Not Found {path}')
+            
+            if len(im0.shape) < 3:
+                im0 = cv2.cvtColor(im0, cv2.COLOR_GRAY2BGR)
+
             s = f'image {self.count}/{self.nf} {path}: '
 
         return [path], [im0], self.cap, s
