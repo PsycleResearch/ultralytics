@@ -1,18 +1,10 @@
 # Ultralytics YOLO 🚀, AGPL-3.0 license
 
 import contextlib
-import re
-import shutil
-import subprocess
-from itertools import repeat
-from multiprocessing.pool import ThreadPool
 from pathlib import Path
 from urllib import parse, request
 
-import requests
-import torch
-
-from ultralytics.utils import LOGGER, TQDM, checks, clean_url, emojis, is_online, url2file
+from ultralytics.utils import LOGGER, TQDM
 
 # Define Ultralytics GitHub assets maintained at https://github.com/ultralytics/assets
 GITHUB_ASSETS_REPO = 'ultralytics/assets'
@@ -180,26 +172,7 @@ def check_disk_space(url='https://ultralytics.com/assets/coco128.zip', sf=1.5, h
     Returns:
         (bool): True if there is sufficient disk space, False otherwise.
     """
-    try:
-        r = requests.head(url)  # response
-        assert r.status_code < 400, f'URL error for {url}: {r.status_code} {r.reason}'  # check response
-    except Exception:
-        return True  # requests issue, default to True
-
-    # Check file size
-    gib = 1 << 30  # bytes per GiB
-    data = int(r.headers.get('Content-Length', 0)) / gib  # file size (GB)
-    total, used, free = (x / gib for x in shutil.disk_usage('/'))  # bytes
-    if data * sf < free:
-        return True  # sufficient space
-
-    # Insufficient space
-    text = (f'WARNING ⚠️ Insufficient free disk space {free:.1f} GB < {data * sf:.3f} GB required, '
-            f'Please free {data * sf - free:.1f} GB additional disk space and try again.')
-    if hard:
-        raise MemoryError(text)
-    LOGGER.warning(text)
-    return False
+    raise RuntimeError("Network usage is disable in custom YoloV8 fork")
 
 
 def get_google_drive_file_info(link):
@@ -221,24 +194,7 @@ def get_google_drive_file_info(link):
         url, filename = get_google_drive_file_info(link)
         ```
     """
-    file_id = link.split('/d/')[1].split('/view')[0]
-    drive_url = f'https://drive.google.com/uc?export=download&id={file_id}'
-    filename = None
-
-    # Start session
-    with requests.Session() as session:
-        response = session.get(drive_url, stream=True)
-        if 'quota exceeded' in str(response.content.lower()):
-            raise ConnectionError(
-                emojis(f'❌  Google Drive file download quota exceeded. '
-                       f'Please try again later or download this file manually at {link}.'))
-        for k, v in response.cookies.items():
-            if k.startswith('download_warning'):
-                drive_url += f'&confirm={v}'  # v is token
-        cd = response.headers.get('content-disposition')
-        if cd:
-            filename = re.findall('filename="(.+)"', cd)[0]
-    return drive_url, filename
+    raise RuntimeError("Network usage is disable in custom YoloV8 fork")
 
 
 def safe_download(url,
@@ -276,79 +232,12 @@ def safe_download(url,
         ```
     """
 
-    # Check if the URL is a Google Drive link
-    gdrive = url.startswith('https://drive.google.com/')
-    if gdrive:
-        url, file = get_google_drive_file_info(url)
-
-    f = Path(dir or '.') / (file or url2file(url))  # URL converted to filename
-    if '://' not in str(url) and Path(url).is_file():  # URL exists ('://' check required in Windows Python<3.10)
-        f = Path(url)  # filename
-    elif not f.is_file():  # URL and file do not exist
-        desc = f"Downloading {url if gdrive else clean_url(url)} to '{f}'"
-        LOGGER.info(f'{desc}...')
-        f.parent.mkdir(parents=True, exist_ok=True)  # make directory if missing
-        check_disk_space(url)
-        for i in range(retry + 1):
-            try:
-                if curl or i > 0:  # curl download with retry, continue
-                    s = 'sS' * (not progress)  # silent
-                    r = subprocess.run(['curl', '-#', f'-{s}L', url, '-o', f, '--retry', '3', '-C', '-']).returncode
-                    assert r == 0, f'Curl return value {r}'
-                else:  # urllib download
-                    method = 'torch'
-                    if method == 'torch':
-                        torch.hub.download_url_to_file(url, f, progress=progress)
-                    else:
-                        with request.urlopen(url) as response, TQDM(total=int(response.getheader('Content-Length', 0)),
-                                                                    desc=desc,
-                                                                    disable=not progress,
-                                                                    unit='B',
-                                                                    unit_scale=True,
-                                                                    unit_divisor=1024) as pbar:
-                            with open(f, 'wb') as f_opened:
-                                for data in response:
-                                    f_opened.write(data)
-                                    pbar.update(len(data))
-
-                if f.exists():
-                    if f.stat().st_size > min_bytes:
-                        break  # success
-                    f.unlink()  # remove partial downloads
-            except Exception as e:
-                if i == 0 and not is_online():
-                    raise ConnectionError(emojis(f'❌  Download failure for {url}. Environment is not online.')) from e
-                elif i >= retry:
-                    raise ConnectionError(emojis(f'❌  Download failure for {url}. Retry limit reached.')) from e
-                LOGGER.warning(f'⚠️ Download failure, retrying {i + 1}/{retry} {url}...')
-
-    if unzip and f.exists() and f.suffix in ('', '.zip', '.tar', '.gz'):
-        from zipfile import is_zipfile
-
-        unzip_dir = dir or f.parent  # unzip to dir if provided else unzip in place
-        if is_zipfile(f):
-            unzip_dir = unzip_file(file=f, path=unzip_dir, progress=progress)  # unzip
-        elif f.suffix in ('.tar', '.gz'):
-            LOGGER.info(f'Unzipping {f} to {unzip_dir.resolve()}...')
-            subprocess.run(['tar', 'xf' if f.suffix == '.tar' else 'xfz', f, '--directory', unzip_dir], check=True)
-        if delete:
-            f.unlink()  # remove zip
-        return unzip_dir
+    raise RuntimeError("Network usage is disable in custom YoloV8 fork")
 
 
 def get_github_assets(repo='ultralytics/assets', version='latest', retry=False):
     """Return GitHub repo tag and assets (i.e. ['yolov8n.pt', 'yolov8s.pt', ...])."""
-    if version != 'latest':
-        version = f'tags/{version}'  # i.e. tags/v6.2
-    url = f'https://api.github.com/repos/{repo}/releases/{version}'
-    r = requests.get(url)  # github api
-    if r.status_code != 200 and r.reason != 'rate limit exceeded' and retry:  # failed and not 403 rate limit exceeded
-        r = requests.get(url)  # try again
-    if r.status_code != 200:
-        LOGGER.warning(f'⚠️ GitHub assets check failure for {url}: {r.status_code} {r.reason}')
-        return '', []
-    data = r.json()
-    return data['tag_name'], [x['name'] for x in data['assets']]  # tag, assets
+    raise RuntimeError("Network usage is disable in custom YoloV8 fork")
 
 
 def attempt_download_asset(file, repo='ultralytics/assets', release='v0.0.0'):
@@ -357,52 +246,9 @@ def attempt_download_asset(file, repo='ultralytics/assets', release='v0.0.0'):
 
     release = 'latest', 'v6.2', etc.
     """
-    from ultralytics.utils import SETTINGS  # scoped for circular import
-
-    # YOLOv3/5u updates
-    file = str(file)
-    file = checks.check_yolov5u_filename(file)
-    file = Path(file.strip().replace("'", ''))
-    if file.exists():
-        return str(file)
-    elif (SETTINGS['weights_dir'] / file).exists():
-        return str(SETTINGS['weights_dir'] / file)
-    else:
-        # URL specified
-        name = Path(parse.unquote(str(file))).name  # decode '%2F' to '/' etc.
-        if str(file).startswith(('http:/', 'https:/')):  # download
-            url = str(file).replace(':/', '://')  # Pathlib turns :// -> :/
-            file = url2file(name)  # parse authentication https://url.com/file.txt?auth...
-            if Path(file).is_file():
-                LOGGER.info(f'Found {clean_url(url)} locally at {file}')  # file already exists
-            else:
-                safe_download(url=url, file=file, min_bytes=1E5)
-
-        elif repo == GITHUB_ASSETS_REPO and name in GITHUB_ASSETS_NAMES:
-            safe_download(url=f'https://github.com/{repo}/releases/download/{release}/{name}', file=file, min_bytes=1E5)
-
-        else:
-            tag, assets = get_github_assets(repo, release)
-            if not assets:
-                tag, assets = get_github_assets(repo)  # latest release
-            if name in assets:
-                safe_download(url=f'https://github.com/{repo}/releases/download/{tag}/{name}', file=file, min_bytes=1E5)
-
-        return str(file)
+    raise RuntimeError("Network usage is disable in custom YoloV8 fork")
 
 
 def download(url, dir=Path.cwd(), unzip=True, delete=False, curl=False, threads=1, retry=3):
     """Downloads and unzips files concurrently if threads > 1, else sequentially."""
-    dir = Path(dir)
-    dir.mkdir(parents=True, exist_ok=True)  # make directory
-    if threads > 1:
-        with ThreadPool(threads) as pool:
-            pool.map(
-                lambda x: safe_download(
-                    url=x[0], dir=x[1], unzip=unzip, delete=delete, curl=curl, retry=retry, progress=threads <= 1),
-                zip(url, repeat(dir)))
-            pool.close()
-            pool.join()
-    else:
-        for u in [url] if isinstance(url, (str, Path)) else url:
-            safe_download(url=u, dir=dir, unzip=unzip, delete=delete, curl=curl, retry=retry)
+    raise RuntimeError("Network usage is disable in custom YoloV8 fork")
