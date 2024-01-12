@@ -4,7 +4,7 @@ import contextlib
 from pathlib import Path
 from urllib import parse, request
 
-from ultralytics.utils import LOGGER, TQDM
+from ultralytics.utils import LOGGER, TQDM, checks
 
 # Define Ultralytics GitHub assets maintained at https://github.com/ultralytics/assets
 GITHUB_ASSETS_REPO = 'ultralytics/assets'
@@ -246,7 +246,18 @@ def attempt_download_asset(file, repo='ultralytics/assets', release='v0.0.0'):
 
     release = 'latest', 'v6.2', etc.
     """
-    raise RuntimeError("Network usage is disable in custom YoloV8 fork")
+    from ultralytics.utils import SETTINGS  # scoped for circular import
+
+    # YOLOv3/5u updates
+    file = str(file)
+    file = checks.check_yolov5u_filename(file)
+    file = Path(file.strip().replace("'", ''))
+    if file.exists():
+        return str(file)
+    elif (SETTINGS['weights_dir'] / file).exists():
+        return str(SETTINGS['weights_dir'] / file)
+    else:
+        raise RuntimeError("Network usage is disable in custom YoloV8 fork")
 
 
 def download(url, dir=Path.cwd(), unzip=True, delete=False, curl=False, threads=1, retry=3):
