@@ -19,7 +19,8 @@ def get_version():
         (str): The version number extracted from the '__version__' attribute in the 'ultralytics/__init__.py' file.
     """
     file = PARENT / 'ultralytics/__init__.py'
-    return re.search(r'^__version__ = [\'"]([^\'"]*)[\'"]', file.read_text(encoding='utf-8'), re.M)[1]
+    # We added a suffix to differenciate these fork versions from the official PyPI versions.
+    return re.search(r'^__version__ = [\'"]([^\'"]*)[\'"]', file.read_text(encoding='utf-8'), re.M)[1] + "+psycle"
 
 
 def parse_requirements(file_path: Path):
