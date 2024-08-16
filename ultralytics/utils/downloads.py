@@ -7,20 +7,43 @@ from urllib import parse, request
 from ultralytics.utils import LOGGER, TQDM, checks
 
 # Define Ultralytics GitHub assets maintained at https://github.com/ultralytics/assets
-GITHUB_ASSETS_REPO = 'ultralytics/assets'
-GITHUB_ASSETS_NAMES = [f'yolov8{k}{suffix}.pt' for k in 'nsmlx' for suffix in ('', '-cls', '-seg', '-pose')] + \
-                      [f'yolov5{k}{resolution}u.pt' for k in 'nsmlx' for resolution in ('', '6')] + \
-                      [f'yolov3{k}u.pt' for k in ('', '-spp', '-tiny')] + \
-                      [f'yolo_nas_{k}.pt' for k in 'sml'] + \
-                      [f'sam_{k}.pt' for k in 'bl'] + \
-                      [f'FastSAM-{k}.pt' for k in 'sx'] + \
-                      [f'rtdetr-{k}.pt' for k in 'lx'] + \
-                      ['mobile_sam.pt']
+GITHUB_ASSETS_REPO = "ultralytics/assets"
+GITHUB_ASSETS_NAMES = (
+    [f"yolov8{k}{suffix}.pt" for k in "nsmlx" for suffix in ("", "-cls", "-seg", "-pose", "-obb", "-oiv7")]
+    + [f"yolov5{k}{resolution}u.pt" for k in "nsmlx" for resolution in ("", "6")]
+    + [f"yolov3{k}u.pt" for k in ("", "-spp", "-tiny")]
+    + [f"yolov8{k}-world.pt" for k in "smlx"]
+    + [f"yolov8{k}-worldv2.pt" for k in "smlx"]
+    + [f"yolov9{k}.pt" for k in "tsmce"]
+    + [f"yolov10{k}.pt" for k in "nsmblx"]
+    + [f"yolo_nas_{k}.pt" for k in "sml"]
+    + [f"sam_{k}.pt" for k in "bl"]
+    + [f"FastSAM-{k}.pt" for k in "sx"]
+    + [f"rtdetr-{k}.pt" for k in "lx"]
+    + ["mobile_sam.pt"]
+    + ["calibration_image_sample_data_20x128x128x3_float32.npy.zip"]
+)
 GITHUB_ASSETS_STEMS = [Path(k).stem for k in GITHUB_ASSETS_NAMES]
 
 
-def is_url(url, check=True):
-    """Check if string is URL and check if URL exists."""
+def is_url(url, check=False):
+    """
+    Validates if the given string is a URL and optionally checks if the URL exists online.
+
+    Args:
+        url (str): The string to be validated as a URL.
+        check (bool, optional): If True, performs an additional check to see if the URL exists online.
+            Defaults to False.
+
+    Returns:
+        (bool): Returns True for a valid URL. If 'check' is True, also returns True if the URL exists online.
+            Returns False otherwise.
+
+    Example:
+        ```python
+        valid = is_url("https://www.example.com")
+        ```
+    """
     with contextlib.suppress(Exception):
         url = str(url)
         result = parse.urlparse(url)
@@ -32,7 +55,7 @@ def is_url(url, check=True):
     return False
 
 
-def delete_dsstore(path, files_to_delete=('.DS_Store', '__MACOSX')):
+def delete_dsstore(path, files_to_delete=(".DS_Store", "__MACOSX")):
     """
     Deletes all ".DS_store" files under a specified directory.
 
@@ -51,15 +74,14 @@ def delete_dsstore(path, files_to_delete=('.DS_Store', '__MACOSX')):
         ".DS_store" files are created by the Apple operating system and contain metadata about folders and files. They
         are hidden system files and can cause issues when transferring files between different operating systems.
     """
-    # Delete Apple .DS_store files
     for file in files_to_delete:
         matches = list(Path(path).rglob(file))
-        LOGGER.info(f'Deleting {file} files: {matches}')
+        LOGGER.info(f"Deleting {file} files: {matches}")
         for f in matches:
             f.unlink()
 
 
-def zip_directory(directory, compress=True, exclude=('.DS_Store', '__MACOSX'), progress=True):
+def zip_directory(directory, compress=True, exclude=(".DS_Store", "__MACOSX"), progress=True):
     """
     Zips the contents of a directory, excluding files containing strings in the exclude list. The resulting zip file is
     named after the directory and placed alongside it.
@@ -88,17 +110,17 @@ def zip_directory(directory, compress=True, exclude=('.DS_Store', '__MACOSX'), p
         raise FileNotFoundError(f"Directory '{directory}' does not exist.")
 
     # Unzip with progress bar
-    files_to_zip = [f for f in directory.rglob('*') if f.is_file() and all(x not in f.name for x in exclude)]
-    zip_file = directory.with_suffix('.zip')
+    files_to_zip = [f for f in directory.rglob("*") if f.is_file() and all(x not in f.name for x in exclude)]
+    zip_file = directory.with_suffix(".zip")
     compression = ZIP_DEFLATED if compress else ZIP_STORED
-    with ZipFile(zip_file, 'w', compression) as f:
-        for file in TQDM(files_to_zip, desc=f'Zipping {directory} to {zip_file}...', unit='file', disable=not progress):
+    with ZipFile(zip_file, "w", compression) as f:
+        for file in TQDM(files_to_zip, desc=f"Zipping {directory} to {zip_file}...", unit="file", disable=not progress):
             f.write(file, file.relative_to(directory))
 
     return zip_file  # return path to zip file
 
 
-def unzip_file(file, path=None, exclude=('.DS_Store', '__MACOSX'), exist_ok=False, progress=True):
+def unzip_file(file, path=None, exclude=(".DS_Store", "__MACOSX"), exist_ok=False, progress=True):
     """
     Unzips a *.zip file to the specified path, excluding files containing strings in the exclude list.
 
@@ -138,35 +160,40 @@ def unzip_file(file, path=None, exclude=('.DS_Store', '__MACOSX'), exist_ok=Fals
         files = [f for f in zipObj.namelist() if all(x not in f for x in exclude)]
         top_level_dirs = {Path(f).parts[0] for f in files}
 
-        if len(top_level_dirs) > 1 or not files[0].endswith('/'):  # zip has multiple files at top level
-            path = extract_path = Path(path) / Path(file).stem  # i.e. ../datasets/coco8
-        else:  # zip has 1 top-level directory
+        # Decide to unzip directly or unzip into a directory
+        unzip_as_dir = len(top_level_dirs) == 1  # (len(files) > 1 and not files[0].endswith("/"))
+        if unzip_as_dir:
+            # Zip has 1 top-level directory
             extract_path = path  # i.e. ../datasets
-            path = Path(path) / list(top_level_dirs)[0]  # i.e. ../datasets/coco8
+            path = Path(path) / list(top_level_dirs)[0]  # i.e. extract coco8/ dir to ../datasets/
+        else:
+            # Zip has multiple files at top level
+            path = extract_path = Path(path) / Path(file).stem  # i.e. extract multiple files to ../datasets/coco8/
 
         # Check if destination directory already exists and contains files
         if path.exists() and any(path.iterdir()) and not exist_ok:
             # If it exists and is not empty, return the path without unzipping
-            LOGGER.warning(f'WARNING ⚠️ Skipping {file} unzip as destination directory {path} is not empty.')
+            LOGGER.warning(f"WARNING ⚠️ Skipping {file} unzip as destination directory {path} is not empty.")
             return path
 
-        for f in TQDM(files, desc=f'Unzipping {file} to {Path(path).resolve()}...', unit='file', disable=not progress):
+        for f in TQDM(files, desc=f"Unzipping {file} to {Path(path).resolve()}...", unit="file", disable=not progress):
             # Ensure the file is within the extract_path to avoid path traversal security vulnerability
-            if '..' in Path(f).parts:
-                LOGGER.warning(f'Potentially insecure file path: {f}, skipping extraction.')
+            if ".." in Path(f).parts:
+                LOGGER.warning(f"Potentially insecure file path: {f}, skipping extraction.")
                 continue
             zipObj.extract(f, extract_path)
 
     return path  # return unzip dir
 
 
-def check_disk_space(url='https://ultralytics.com/assets/coco128.zip', sf=1.5, hard=True):
+def check_disk_space(url="https://ultralytics.com/assets/coco8.zip", path=Path.cwd(), sf=1.5, hard=True):
     """
     Check if there is sufficient disk space to download and store a file.
 
     Args:
-        url (str, optional): The URL to the file. Defaults to 'https://ultralytics.com/assets/coco128.zip'.
-        sf (float, optional): Safety factor, the multiplier for the required free space. Defaults to 2.0.
+        url (str, optional): The URL to the file. Defaults to 'https://ultralytics.com/assets/coco8.zip'.
+        path (str | Path, optional): The path or drive to check the available free space on.
+        sf (float, optional): Safety factor, the multiplier for the required free space. Defaults to 1.5.
         hard (bool, optional): Whether to throw an error or not on insufficient disk space. Defaults to True.
 
     Returns:
@@ -197,15 +224,18 @@ def get_google_drive_file_info(link):
     raise RuntimeError("Network usage is disable in custom YoloV8 fork")
 
 
-def safe_download(url,
-                  file=None,
-                  dir=None,
-                  unzip=True,
-                  delete=False,
-                  curl=False,
-                  retry=3,
-                  min_bytes=1E0,
-                  progress=True):
+def safe_download(
+    url,
+    file=None,
+    dir=None,
+    unzip=True,
+    delete=False,
+    curl=False,
+    retry=3,
+    min_bytes=1e0,
+    exist_ok=False,
+    progress=True,
+):
     """
     Downloads files from a URL, with options for retrying, unzipping, and deleting the downloaded file.
 
@@ -221,6 +251,7 @@ def safe_download(url,
         retry (int, optional): The number of times to retry the download in case of failure. Default: 3.
         min_bytes (float, optional): The minimum number of bytes that the downloaded file should have, to be considered
             a successful download. Default: 1E0.
+        exist_ok (bool, optional): Whether to overwrite existing contents during unzipping. Defaults to False.
         progress (bool, optional): Whether to display a progress bar during the download. Default: True.
 
     Example:
@@ -240,22 +271,35 @@ def get_github_assets(repo='ultralytics/assets', version='latest', retry=False):
     raise RuntimeError("Network usage is disable in custom YoloV8 fork")
 
 
-def attempt_download_asset(file, repo='ultralytics/assets', release='v0.0.0'):
+def attempt_download_asset(file, repo="ultralytics/assets", release="v8.2.0", **kwargs):
     """
-    Attempt file download from GitHub release assets if not found locally.
+    Attempt to download a file from GitHub release assets if it is not found locally. The function checks for the file
+    locally first, then tries to download it from the specified GitHub repository release.
 
-    release = 'latest', 'v6.2', etc.
+    Args:
+        file (str | Path): The filename or file path to be downloaded.
+        repo (str, optional): The GitHub repository in the format 'owner/repo'. Defaults to 'ultralytics/assets'.
+        release (str, optional): The specific release version to be downloaded. Defaults to 'v8.2.0'.
+        **kwargs (any): Additional keyword arguments for the download process.
+
+    Returns:
+        (str): The path to the downloaded file.
+
+    Example:
+        ```python
+        file_path = attempt_download_asset('yolov8n.pt', repo='ultralytics/assets', release='latest')
+        ```
     """
     from ultralytics.utils import SETTINGS  # scoped for circular import
 
     # YOLOv3/5u updates
     file = str(file)
     file = checks.check_yolov5u_filename(file)
-    file = Path(file.strip().replace("'", ''))
+    file = Path(file.strip().replace("'", ""))
     if file.exists():
         return str(file)
-    elif (SETTINGS['weights_dir'] / file).exists():
-        return str(SETTINGS['weights_dir'] / file)
+    elif (SETTINGS["weights_dir"] / file).exists():
+        return str(SETTINGS["weights_dir"] / file)
     else:
         raise RuntimeError("Network usage is disable in custom YoloV8 fork")
 
