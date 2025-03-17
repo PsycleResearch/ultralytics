@@ -1,4 +1,4 @@
-# Ultralytics YOLO 🚀, AGPL-3.0 license
+# Ultralytics 🚀 AGPL-3.0 License - https://ultralytics.com/license
 
 import os
 import platform
@@ -43,7 +43,7 @@ def request_with_credentials(url: str) -> any:
         url (str): The URL to make the request to.
 
     Returns:
-        (any): The response data from the AJAX request.
+        (Any): The response data from the AJAX request.
 
     Raises:
         OSError: If the function is not run in a Google Colab environment.
@@ -83,45 +83,61 @@ def requests_with_progress(method, url, **kwargs):
     Args:
         method (str): The HTTP method to use (e.g. 'GET', 'POST').
         url (str): The URL to send the request to.
-        **kwargs (any): Additional keyword arguments to pass to the underlying `requests.request` function.
+        **kwargs (Any): Additional keyword arguments to pass to the underlying `requests.request` function.
 
     Returns:
         (requests.Response): The response object from the HTTP request.
 
-    Note:
+    Notes:
         - If 'progress' is set to True, the progress bar will display the download progress for responses with a known
-        content length.
+          content length.
         - If 'progress' is a number then progress bar will display assuming content length = progress.
     """
     progress = kwargs.pop("progress", False)
     if not progress:
         return requests.request(method, url, **kwargs)
     response = requests.request(method, url, stream=True, **kwargs)
-    total = int(response.headers.get("content-length", 0) if isinstance(progress, bool) else progress)  # total size
+    total = int(
+        response.headers.get("content-length", 0)
+        if isinstance(progress, bool)
+        else progress
+    )  # total size
     try:
         pbar = TQDM(total=total, unit="B", unit_scale=True, unit_divisor=1024)
         for data in response.iter_content(chunk_size=1024):
             pbar.update(len(data))
         pbar.close()
-    except requests.exceptions.ChunkedEncodingError:  # avoid 'Connection broken: IncompleteRead' warnings
+    except (
+        requests.exceptions.ChunkedEncodingError
+    ):  # avoid 'Connection broken: IncompleteRead' warnings
         response.close()
     return response
 
 
-def smart_request(method, url, retry=3, timeout=30, thread=True, code=-1, verbose=True, progress=False, **kwargs):
+def smart_request(
+    method,
+    url,
+    retry=3,
+    timeout=30,
+    thread=True,
+    code=-1,
+    verbose=True,
+    progress=False,
+    **kwargs,
+):
     """
-    Makes an HTTP request using the 'requests' library, with exponential backoff retries up to a specified timeout.
+    Make an HTTP request using the 'requests' library, with exponential backoff retries up to a specified timeout.
 
     Args:
         method (str): The HTTP method to use for the request. Choices are 'post' and 'get'.
         url (str): The URL to make the request to.
-        retry (int, optional): Number of retries to attempt before giving up. Default is 3.
-        timeout (int, optional): Timeout in seconds after which the function will give up retrying. Default is 30.
-        thread (bool, optional): Whether to execute the request in a separate daemon thread. Default is True.
-        code (int, optional): An identifier for the request, used for logging purposes. Default is -1.
-        verbose (bool, optional): A flag to determine whether to print out to console or not. Default is True.
-        progress (bool, optional): Whether to show a progress bar during the request. Default is False.
-        **kwargs (any): Keyword arguments to be passed to the requests function specified in method.
+        retry (int, optional): Number of retries to attempt before giving up.
+        timeout (int, optional): Timeout in seconds after which the function will give up retrying.
+        thread (bool, optional): Whether to execute the request in a separate daemon thread.
+        code (int, optional): An identifier for the request, used for logging purposes.
+        verbose (bool, optional): A flag to determine whether to print out to console or not.
+        progress (bool, optional): Whether to show a progress bar during the request.
+        **kwargs (Any): Keyword arguments to be passed to the requests function specified in method.
 
     Returns:
         (requests.Response): The HTTP response object. If the request is executed in a separate thread, returns None.
@@ -136,8 +152,12 @@ def smart_request(method, url, retry=3, timeout=30, thread=True, code=-1, verbos
         for i in range(retry + 1):
             if (time.time() - t0) > timeout:
                 break
-            r = requests_with_progress(func_method, func_url, **func_kwargs)  # i.e. get(url, data, json, files)
-            if r.status_code < 300:  # return codes in the 2xx range are generally considered "good" or "successful"
+            r = requests_with_progress(
+                func_method, func_url, **func_kwargs
+            )  # i.e. get(url, data, json, files)
+            if (
+                r.status_code < 300
+            ):  # return codes in the 2xx range are generally considered "good" or "successful"
                 break
             try:
                 m = r.json().get("message", "No JSON message.")
