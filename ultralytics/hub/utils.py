@@ -1,32 +1,12 @@
 # Ultralytics 🚀 AGPL-3.0 License - https://ultralytics.com/license
 
 import os
-import platform
-import random
 import threading
 import time
-from pathlib import Path
 
 import requests
 
-from ultralytics.utils import (
-    ARGV,
-    ENVIRONMENT,
-    IS_COLAB,
-    IS_GIT_DIR,
-    IS_PIP_PACKAGE,
-    LOGGER,
-    ONLINE,
-    RANK,
-    SETTINGS,
-    TESTS_RUNNING,
-    TQDM,
-    TryExcept,
-    __version__,
-    colorstr,
-    get_git_origin_url,
-)
-from ultralytics.utils.downloads import GITHUB_ASSETS_NAMES
+from ultralytics.utils import IS_COLAB, LOGGER, TQDM, TryExcept, colorstr
 
 HUB_API_ROOT = os.environ.get("ULTRALYTICS_HUB_API", "https://api.ultralytics.com")
 HUB_WEB_ROOT = os.environ.get("ULTRALYTICS_HUB_WEB", "https://hub.ultralytics.com")

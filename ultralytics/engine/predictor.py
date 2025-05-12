@@ -59,7 +59,7 @@ from ultralytics.utils.files import increment_path
 from ultralytics.utils.torch_utils import select_device, smart_inference_mode
 
 STREAM_WARNING = """
-WARNING ⚠️ inference results will accumulate in RAM unless `stream=True` is passed, causing potential out-of-memory
+inference results will accumulate in RAM unless `stream=True` is passed, causing potential out-of-memory
 errors for large sources or long-running streams and videos. See https://docs.ultralytics.com/modes/predict/ for help.
 
 Example:
@@ -90,9 +90,9 @@ class BasePredictor:
         plotted_img (numpy.ndarray): Last plotted image.
         source_type (SimpleNamespace): Type of input source.
         seen (int): Number of images processed.
-        windows (List): List of window names for visualization.
+        windows (list): List of window names for visualization.
         batch (tuple): Current batch data.
-        results (List): Current batch results.
+        results (list): Current batch results.
         transforms (callable): Image transforms for classification.
         callbacks (dict): Callback functions for different events.
         txt_path (Path): Path to save text results.
@@ -159,9 +159,9 @@ class BasePredictor:
         not_tensor = not isinstance(im, torch.Tensor)
         if not_tensor:
             im = np.stack(self.pre_transform(im))
-            im = im[..., ::-1].transpose(
-                (0, 3, 1, 2)
-            )  # BGR to RGB, BHWC to BCHW, (n, 3, h, w)
+            if im.shape[-1] == 3:
+                im = im[..., ::-1]  # BGR to RGB
+            im = im.transpose((0, 3, 1, 2))  # BHWC to BCHW, (n, 3, h, w)
             im = np.ascontiguousarray(im)  # contiguous
             im = torch.from_numpy(im)
 
@@ -207,6 +207,7 @@ class BasePredictor:
         letterbox = LetterBox(
             self.imgsz,
             auto=same_shapes
+            and self.args.rect
             and (
                 self.model.pt
                 or (getattr(self.model, "dynamic", False) and not self.model.imx)
@@ -278,9 +279,7 @@ class BasePredictor:
             getattr(
                 self.model.model,
                 "transforms",
-                classify_transforms(
-                    self.imgsz[0], crop_fraction=self.args.crop_fraction
-                ),
+                classify_transforms(self.imgsz[0]),
             )
             if self.args.task == "classify"
             else None
@@ -290,6 +289,7 @@ class BasePredictor:
             batch=self.args.batch,
             vid_stride=self.args.vid_stride,
             buffer=self.args.stream_buffer,
+            channels=getattr(self.model, "ch", 3),
         )
         self.source_type = self.dataset.source_type
         if not getattr(self, "stream", True) and (
@@ -338,7 +338,7 @@ class BasePredictor:
                 self.model.warmup(
                     imgsz=(
                         1 if self.model.pt or self.model.triton else self.dataset.bs,
-                        3,
+                        self.model.ch,
                         *self.imgsz,
                     )
                 )
@@ -407,7 +407,8 @@ class BasePredictor:
             t = tuple(x.t / self.seen * 1e3 for x in profilers)  # speeds per image
             LOGGER.info(
                 f"Speed: %.1fms preprocess, %.1fms inference, %.1fms postprocess per image at shape "
-                f"{(min(self.args.batch, self.seen), 3, *im.shape[2:])}" % t
+                f"{(min(self.args.batch, self.seen), getattr(self.model, 'ch', 3), *im.shape[2:])}"
+                % t
             )
         if self.args.save or self.args.save_txt or self.args.save_crop:
             nl = len(list(self.save_dir.glob("labels/*.txt")))  # number of labels

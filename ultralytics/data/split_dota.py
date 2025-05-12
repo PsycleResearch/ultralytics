@@ -30,7 +30,7 @@ def bbox_iof(polygon1, bbox2, eps=1e-6):
         Polygon format: [x1, y1, x2, y2, x3, y3, x4, y4].
         Bounding box format: [x_min, y_min, x_max, y_max].
     """
-    check_requirements("shapely")
+    check_requirements("shapely>=2.0.0")
     from shapely.geometry import Polygon
 
     polygon1 = polygon1.reshape(-1, 4, 2)
@@ -163,9 +163,9 @@ def crop_and_save(anno, windows, window_objs, im_dir, lb_dir, allow_background_i
     Crop images and save new labels.
 
     Args:
-        anno (Dict): Annotation dict, including `filepath`, `label`, `ori_size` as its keys.
+        anno (dict): Annotation dict, including `filepath`, `label`, `ori_size` as its keys.
         windows (np.ndarray): Array of windows coordinates with shape (n, 4).
-        window_objs (List): A list of labels inside each window.
+        window_objs (list): A list of labels inside each window.
         im_dir (str): The output directory path of images.
         lb_dir (str): The output directory path of labels.
         allow_background_images (bool): Whether to include background images without labels.

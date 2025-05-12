@@ -19,7 +19,6 @@ from pathlib import Path
 from ultralytics.engine.model import Model
 from ultralytics.utils.torch_utils import model_info
 
-from .build import build_sam
 from .predict import Predictor, SAM2Predictor
 
 
@@ -78,6 +77,8 @@ class SAM(Model):
             >>> sam = SAM("sam_b.pt")
             >>> sam._load("path/to/custom_weights.pt")
         """
+        from .build import build_sam  # slow import
+
         self.model = build_sam(weights)
 
     def predict(self, source, stream=False, bboxes=None, points=None, labels=None, **kwargs):
@@ -94,7 +95,7 @@ class SAM(Model):
             **kwargs (Any): Additional keyword arguments for prediction.
 
         Returns:
-            (List): The model predictions.
+            (list): The model predictions.
 
         Examples:
             >>> sam = SAM("sam_b.pt")
@@ -124,7 +125,7 @@ class SAM(Model):
             **kwargs (Any): Additional keyword arguments to be passed to the predict method.
 
         Returns:
-            (List): The model predictions, typically containing segmentation masks and other relevant information.
+            (list): The model predictions, typically containing segmentation masks and other relevant information.
 
         Examples:
             >>> sam = SAM("sam_b.pt")
