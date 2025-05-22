@@ -24,7 +24,6 @@ import numpy as np
 import torch
 import tqdm
 
-from ultralytics import __version__
 from ultralytics.utils.patches import (
     imread,
     imshow,
