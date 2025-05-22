@@ -43,7 +43,7 @@ import torch
 
 from ultralytics.cfg import get_cfg, get_save_dir
 from ultralytics.data import load_inference_source
-from ultralytics.data.augment import LetterBox, classify_transforms
+from ultralytics.data.augment import LetterBox
 from ultralytics.nn.autobackend import AutoBackend
 from ultralytics.utils import (
     DEFAULT_CFG,
@@ -275,15 +275,6 @@ class BasePredictor:
         self.imgsz = check_imgsz(
             self.args.imgsz, stride=self.model.stride, min_dim=2
         )  # check image size
-        self.transforms = (
-            getattr(
-                self.model.model,
-                "transforms",
-                classify_transforms(self.imgsz[0]),
-            )
-            if self.args.task == "classify"
-            else None
-        )
         self.dataset = load_inference_source(
             source=source,
             batch=self.args.batch,
@@ -441,6 +432,8 @@ class BasePredictor:
 
         self.device = self.model.device  # update device
         self.args.half = self.model.fp16  # update half
+        if hasattr(self.model, "imgsz"):
+            self.args.imgsz = self.model.imgsz  # reuse imgsz from export metadata
         self.model.eval()
 
     def write_results(self, i, p, im, s):
