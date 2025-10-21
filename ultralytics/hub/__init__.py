@@ -1,7 +1,5 @@
 # Ultralytics 🚀 AGPL-3.0 License - https://ultralytics.com/license
 
-import requests
-
 from ultralytics.data.utils import HUBDatasetStats
 from ultralytics.hub.auth import Auth
 from ultralytics.hub.session import HUBTrainingSession
@@ -30,8 +28,8 @@ def login(api_key: str = None, save: bool = True) -> bool:
     environment variable if successfully authenticated.
 
     Args:
-        api_key (str, optional): API key to use for authentication. If not provided, it will be retrieved from SETTINGS
-            or HUB_API_KEY environment variable.
+        api_key (str, optional): API key to use for authentication. If not provided, it will be retrieved from
+            SETTINGS or HUB_API_KEY environment variable.
         save (bool, optional): Whether to save the API key to SETTINGS if authentication is successful.
 
     Returns:
@@ -75,19 +73,15 @@ def login(api_key: str = None, save: bool = True) -> bool:
 
 
 def logout():
-    """
-    Log out of Ultralytics HUB by removing the API key from the settings file. To log in again, use 'yolo login'.
-
-    Examples:
-        >>> from ultralytics import hub
-        >>> hub.logout()
-    """
+    """Log out of Ultralytics HUB by removing the API key from the settings file."""
     SETTINGS["api_key"] = ""
     LOGGER.info(f"{PREFIX}logged out ✅. To log in again, use 'yolo login'.")
 
 
 def reset_model(model_id: str = ""):
     """Reset a trained model to an untrained state."""
+    import requests  # scoped as slow import
+
     r = requests.post(
         f"{HUB_API_ROOT}/model-reset",
         json={"modelId": model_id},
@@ -100,7 +94,7 @@ def reset_model(model_id: str = ""):
 
 
 def export_fmts_hub():
-    """Returns a list of HUB-supported export formats."""
+    """Return a list of HUB-supported export formats."""
     from ultralytics.engine.exporter import export_formats
 
     return list(export_formats()["Argument"][1:]) + [
@@ -125,6 +119,8 @@ def export_model(model_id: str = "", format: str = "torchscript"):
         >>> from ultralytics import hub
         >>> hub.export_model(model_id="your_model_id", format="torchscript")
     """
+    import requests  # scoped as slow import
+
     assert (
         format in export_fmts_hub()
     ), f"Unsupported export format '{format}', valid formats are {export_fmts_hub()}"
@@ -145,15 +141,21 @@ def get_export(model_id: str = "", format: str = "torchscript"):
 
     Args:
         model_id (str): The ID of the model to retrieve from Ultralytics HUB.
-        format (str): The export format to retrieve. Must be one of the supported formats returned by export_fmts_hub().
+        format (str): The export format to retrieve. Must be one of the supported formats returned by
+            export_fmts_hub().
+
+    Returns:
+        (dict): JSON response containing the exported model information.
 
     Raises:
         AssertionError: If the specified format is not supported or if the API request fails.
 
     Examples:
         >>> from ultralytics import hub
-        >>> hub.get_export(model_id="your_model_id", format="torchscript")
+        >>> result = hub.get_export(model_id="your_model_id", format="torchscript")
     """
+    import requests  # scoped as slow import
+
     assert (
         format in export_fmts_hub()
     ), f"Unsupported export format '{format}', valid formats are {export_fmts_hub()}"
@@ -184,7 +186,7 @@ def check_dataset(path: str, task: str) -> None:
         >>> check_dataset("path/to/dota8.zip", task="obb")  # OBB dataset
         >>> check_dataset("path/to/imagenet10.zip", task="classify")  # classification dataset
 
-    Note:
+    Notes:
         Download *.zip files from https://github.com/ultralytics/hub/tree/main/example_datasets
         i.e. https://github.com/ultralytics/hub/raw/main/example_datasets/coco8.zip for coco8.zip.
     """
