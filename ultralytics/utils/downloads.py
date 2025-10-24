@@ -1,5 +1,8 @@
 # Ultralytics 🚀 AGPL-3.0 License - https://ultralytics.com/license
 
+from __future__ import annotations
+
+import shutil
 from pathlib import Path
 from urllib import parse, request
 
@@ -38,46 +41,49 @@ GITHUB_ASSETS_NAMES = frozenset(
     + [
         "mobile_sam.pt",
         "mobileclip_blt.ts",
+        "yolo11n-grayscale.pt",
         "calibration_image_sample_data_20x128x128x3_float32.npy.zip",
     ]
 )
 GITHUB_ASSETS_STEMS = frozenset(k.rpartition(".")[0] for k in GITHUB_ASSETS_NAMES)
 
 
-def is_url(url, check=False):
+def is_url(url: str | Path, check: bool = False) -> bool:
     """
-    Validates if the given string is a URL and optionally checks if the URL exists online.
+    Validate if the given string is a URL and optionally check if the URL exists online.
 
     Args:
         url (str): The string to be validated as a URL.
         check (bool, optional): If True, performs an additional check to see if the URL exists online.
-            Defaults to False.
 
     Returns:
-        (bool): Returns True for a valid URL. If 'check' is True, also returns True if the URL exists online.
-            Returns False otherwise.
+        (bool): True for a valid URL. If 'check' is True, also returns True if the URL exists online.
 
     Examples:
         >>> valid = is_url("https://www.example.com")
+        >>> valid_and_exists = is_url("https://www.example.com", check=True)
     """
     try:
         url = str(url)
         result = parse.urlparse(url)
-        assert all([result.scheme, result.netloc])  # check if is url
+        if not (result.scheme and result.netloc):
+            return False
         if check:
-            with request.urlopen(url) as response:
-                return response.getcode() == 200  # check if exists online
+            r = request.urlopen(request.Request(url, method="HEAD"), timeout=3)
+            return 200 <= r.getcode() < 400
         return True
     except Exception:
         return False
 
 
-def delete_dsstore(path, files_to_delete=(".DS_Store", "__MACOSX")):
+def delete_dsstore(
+    path: str | Path, files_to_delete: tuple[str, ...] = (".DS_Store", "__MACOSX")
+) -> None:
     """
-    Delete all ".DS_store" files in a specified directory.
+    Delete all specified system files in a directory.
 
     Args:
-        path (str, optional): The directory path where the ".DS_store" files should be deleted.
+        path (str | Path): The directory path where the files should be deleted.
         files_to_delete (tuple): The files to be deleted.
 
     Examples:
@@ -96,17 +102,21 @@ def delete_dsstore(path, files_to_delete=(".DS_Store", "__MACOSX")):
 
 
 def zip_directory(
-    directory, compress=True, exclude=(".DS_Store", "__MACOSX"), progress=True
-):
+    directory: str | Path,
+    compress: bool = True,
+    exclude: tuple[str, ...] = (".DS_Store", "__MACOSX"),
+    progress: bool = True,
+) -> Path:
     """
-    Zips the contents of a directory, excluding files containing strings in the exclude list. The resulting zip file is
-    named after the directory and placed alongside it.
+    Zip the contents of a directory, excluding specified files.
+
+    The resulting zip file is named after the directory and placed alongside it.
 
     Args:
         directory (str | Path): The path to the directory to be zipped.
-        compress (bool): Whether to compress the files while zipping. Default is True.
-        exclude (tuple, optional): A tuple of filename strings to be excluded. Defaults to ('.DS_Store', '__MACOSX').
-        progress (bool, optional): Whether to display a progress bar. Defaults to True.
+        compress (bool): Whether to compress the files while zipping.
+        exclude (tuple, optional): A tuple of filename strings to be excluded.
+        progress (bool, optional): Whether to display a progress bar.
 
     Returns:
         (Path): The path to the resulting zip file.
@@ -122,19 +132,19 @@ def zip_directory(
     if not directory.is_dir():
         raise FileNotFoundError(f"Directory '{directory}' does not exist.")
 
-    # Unzip with progress bar
-    files_to_zip = [
+    # Zip with progress bar
+    files = [
         f
         for f in directory.rglob("*")
         if f.is_file() and all(x not in f.name for x in exclude)
-    ]
+    ]  # files to zip
     zip_file = directory.with_suffix(".zip")
     compression = ZIP_DEFLATED if compress else ZIP_STORED
     with ZipFile(zip_file, "w", compression) as f:
         for file in TQDM(
-            files_to_zip,
+            files,
             desc=f"Zipping {directory} to {zip_file}...",
-            unit="file",
+            unit="files",
             disable=not progress,
         ):
             f.write(file, file.relative_to(directory))
@@ -143,10 +153,14 @@ def zip_directory(
 
 
 def unzip_file(
-    file, path=None, exclude=(".DS_Store", "__MACOSX"), exist_ok=False, progress=True
-):
+    file: str | Path,
+    path: str | Path | None = None,
+    exclude: tuple[str, ...] = (".DS_Store", "__MACOSX"),
+    exist_ok: bool = False,
+    progress: bool = True,
+) -> Path:
     """
-    Unzips a *.zip file to the specified path, excluding files containing strings in the exclude list.
+    Unzip a *.zip file to the specified path, excluding specified files.
 
     If the zipfile does not contain a single top-level directory, the function will create a new
     directory with the same name as the zipfile (without the extension) to extract its contents.
@@ -154,16 +168,16 @@ def unzip_file(
 
     Args:
         file (str | Path): The path to the zipfile to be extracted.
-        path (str | Path, optional): The path to extract the zipfile to. Defaults to None.
-        exclude (tuple, optional): A tuple of filename strings to be excluded. Defaults to ('.DS_Store', '__MACOSX').
-        exist_ok (bool, optional): Whether to overwrite existing contents if they exist. Defaults to False.
-        progress (bool, optional): Whether to display a progress bar. Defaults to True.
-
-    Raises:
-        BadZipFile: If the provided file does not exist or is not a valid zipfile.
+        path (str | Path, optional): The path to extract the zipfile to.
+        exclude (tuple, optional): A tuple of filename strings to be excluded.
+        exist_ok (bool, optional): Whether to overwrite existing contents if they exist.
+        progress (bool, optional): Whether to display a progress bar.
 
     Returns:
         (Path): The path to the directory where the zipfile was extracted.
+
+    Raises:
+        BadZipFile: If the provided file does not exist or is not a valid zipfile.
 
     Examples:
         >>> from ultralytics.utils.downloads import unzip_file
@@ -208,7 +222,7 @@ def unzip_file(
         for f in TQDM(
             files,
             desc=f"Unzipping {file} to {Path(path).resolve()}...",
-            unit="file",
+            unit="files",
             disable=not progress,
         ):
             # Ensure the file is within the extract_path to avoid path traversal security vulnerability
@@ -223,56 +237,72 @@ def unzip_file(
 
 
 def check_disk_space(
-    url="https://ultralytics.com/assets/coco8.zip", path=Path.cwd(), sf=1.5, hard=True
-):
+    file_bytes: int,
+    path: str | Path = Path.cwd(),
+    sf: float = 1.5,
+    hard: bool = True,
+) -> bool:
     """
     Check if there is sufficient disk space to download and store a file.
 
     Args:
-        url (str, optional): The URL to the file. Defaults to 'https://ultralytics.com/assets/coco8.zip'.
+        file_bytes (int): The file size in bytes.
         path (str | Path, optional): The path or drive to check the available free space on.
-        sf (float, optional): Safety factor, the multiplier for the required free space. Defaults to 1.5.
-        hard (bool, optional): Whether to throw an error or not on insufficient disk space. Defaults to True.
+        sf (float, optional): Safety factor, the multiplier for the required free space.
+        hard (bool, optional): Whether to throw an error or not on insufficient disk space.
 
     Returns:
         (bool): True if there is sufficient disk space, False otherwise.
     """
-    raise RuntimeError("Network usage is disable in custom YoloV8 fork")
+    total, used, free = shutil.disk_usage(path)  # bytes
+    if file_bytes * sf < free:
+        return True  # sufficient space
+
+    # Insufficient space
+    text = (
+        f"Insufficient free disk space {free >> 30:.3f} GB < {int(file_bytes * sf) >> 30:.3f} GB required, "
+        f"Please free {int(file_bytes * sf - free) >> 30:.3f} GB additional disk space and try again."
+    )
+    if hard:
+        raise MemoryError(text)
+    LOGGER.warning(text)
+    return False
 
 
-def get_google_drive_file_info(link):
+def get_google_drive_file_info(link: str) -> tuple[str, str | None]:
     """
-    Retrieves the direct download link and filename for a shareable Google Drive file link.
+    Retrieve the direct download link and filename for a shareable Google Drive file link.
 
     Args:
         link (str): The shareable link of the Google Drive file.
 
     Returns:
-        (str): Direct download URL for the Google Drive file.
-        (str): Original filename of the Google Drive file. If filename extraction fails, returns None.
+        url (str): Direct download URL for the Google Drive file.
+        filename (str | None): Original filename of the Google Drive file. If filename extraction fails, returns None.
 
     Examples:
         >>> from ultralytics.utils.downloads import get_google_drive_file_info
         >>> link = "https://drive.google.com/file/d/1cqT-cJgANNrhIHCrEufUYhQ4RqiWG_lJ/view?usp=drive_link"
         >>> url, filename = get_google_drive_file_info(link)
     """
-    raise RuntimeError("Network usage is disable in custom YoloV8 fork")
+    raise RuntimeError("Network usage is disable in our ultralytics fork")
 
 
 def safe_download(
-    url,
-    file=None,
-    dir=None,
-    unzip=True,
-    delete=False,
-    curl=False,
-    retry=3,
-    min_bytes=1e0,
-    exist_ok=False,
-    progress=True,
-):
+    url: str | Path,
+    file: str | Path | None = None,
+    dir: str | Path | None = None,
+    unzip: bool = True,
+    delete: bool = False,
+    curl: bool = False,
+    retry: int = 3,
+    min_bytes: float = 1e0,
+    exist_ok: bool = False,
+    progress: bool = True,
+) -> Path | str:
     """
-    Downloads files from a URL, with options for retrying, unzipping, and deleting the downloaded file.
+    Download files from a URL with options for retrying, unzipping, and deleting the downloaded file. Enhanced with
+    robust partial download detection using Content-Length validation.
 
     Args:
         url (str): The URL of the file to be downloaded.
@@ -280,14 +310,14 @@ def safe_download(
             If not provided, the file will be saved with the same name as the URL.
         dir (str | Path, optional): The directory to save the downloaded file.
             If not provided, the file will be saved in the current working directory.
-        unzip (bool, optional): Whether to unzip the downloaded file. Default: True.
-        delete (bool, optional): Whether to delete the downloaded file after unzipping. Default: False.
-        curl (bool, optional): Whether to use curl command line tool for downloading. Default: False.
-        retry (int, optional): The number of times to retry the download in case of failure. Default: 3.
+        unzip (bool, optional): Whether to unzip the downloaded file.
+        delete (bool, optional): Whether to delete the downloaded file after unzipping.
+        curl (bool, optional): Whether to use curl command line tool for downloading.
+        retry (int, optional): The number of times to retry the download in case of failure.
         min_bytes (float, optional): The minimum number of bytes that the downloaded file should have, to be considered
-            a successful download. Default: 1E0.
-        exist_ok (bool, optional): Whether to overwrite existing contents during unzipping. Defaults to False.
-        progress (bool, optional): Whether to display a progress bar during the download. Default: True.
+            a successful download.
+        exist_ok (bool, optional): Whether to overwrite existing contents during unzipping.
+        progress (bool, optional): Whether to display a progress bar during the download.
 
     Returns:
         (Path | str): The path to the downloaded file or extracted directory.
@@ -298,37 +328,47 @@ def safe_download(
         >>> path = safe_download(link)
     """
 
-    raise RuntimeError("Network usage is disable in custom YoloV8 fork")
+    raise RuntimeError("Network usage is disable in our ultralytics fork")
 
 
-def get_github_assets(repo="ultralytics/assets", version="latest", retry=False):
+def get_github_assets(
+    repo: str = "ultralytics/assets",
+    version: str = "latest",
+    retry: bool = False,
+) -> tuple[str, list[str]]:
     """
-    Retrieve the specified version's tag and assets from a GitHub repository. If the version is not specified, the
-    function fetches the latest release assets.
+    Retrieve the specified version's tag and assets from a GitHub repository.
+
+    If the version is not specified, the function fetches the latest release assets.
 
     Args:
-        repo (str, optional): The GitHub repository in the format 'owner/repo'. Defaults to 'ultralytics/assets'.
-        version (str, optional): The release version to fetch assets from. Defaults to 'latest'.
-        retry (bool, optional): Flag to retry the request in case of a failure. Defaults to False.
+        repo (str, optional): The GitHub repository in the format 'owner/repo'.
+        version (str, optional): The release version to fetch assets from.
+        retry (bool, optional): Flag to retry the request in case of a failure.
 
     Returns:
-        (str): The release tag.
-        (List[str]): A list of asset names.
+        tag (str): The release tag.
+        assets (list[str]): A list of asset names.
 
     Examples:
         >>> tag, assets = get_github_assets(repo="ultralytics/assets", version="latest")
     """
-    raise RuntimeError("Network usage is disable in custom YoloV8 fork")
+    raise RuntimeError("Network usage is disable in our ultralytics fork")
 
 
-def attempt_download_asset(file, repo="ultralytics/assets", release="v8.3.0", **kwargs):
+def attempt_download_asset(
+    file: str | Path,
+    repo: str = "ultralytics/assets",
+    release: str = "v8.3.0",
+    **kwargs,
+) -> str:
     """
     Attempt to download a file from GitHub release assets if it is not found locally.
 
     Args:
         file (str | Path): The filename or file path to be downloaded.
-        repo (str, optional): The GitHub repository in the format 'owner/repo'. Defaults to 'ultralytics/assets'.
-        release (str, optional): The specific release version to be downloaded. Defaults to 'v8.3.0'.
+        repo (str, optional): The GitHub repository in the format 'owner/repo'.
+        release (str, optional): The specific release version to be downloaded.
         **kwargs (Any): Additional keyword arguments for the download process.
 
     Returns:
@@ -348,11 +388,35 @@ def attempt_download_asset(file, repo="ultralytics/assets", release="v8.3.0", **
     elif (SETTINGS["weights_dir"] / file).exists():
         return str(SETTINGS["weights_dir"] / file)
     else:
-        raise RuntimeError("Network usage is disable in custom YoloV8 fork")
+        raise RuntimeError("Network usage is disable in our ultralytics fork")
 
 
 def download(
-    url, dir=Path.cwd(), unzip=True, delete=False, curl=False, threads=1, retry=3
-):
-    """Downloads and unzips files concurrently if threads > 1, else sequentially."""
-    raise RuntimeError("Network usage is disable in custom YoloV8 fork")
+    url: str | list[str] | Path,
+    dir: Path = Path.cwd(),
+    unzip: bool = True,
+    delete: bool = False,
+    curl: bool = False,
+    threads: int = 1,
+    retry: int = 3,
+    exist_ok: bool = False,
+) -> None:
+    """
+    Download files from specified URLs to a given directory.
+
+    Supports concurrent downloads if multiple threads are specified.
+
+    Args:
+        url (str | list[str]): The URL or list of URLs of the files to be downloaded.
+        dir (Path, optional): The directory where the files will be saved.
+        unzip (bool, optional): Flag to unzip the files after downloading.
+        delete (bool, optional): Flag to delete the zip files after extraction.
+        curl (bool, optional): Flag to use curl for downloading.
+        threads (int, optional): Number of threads to use for concurrent downloads.
+        retry (int, optional): Number of retries in case of download failure.
+        exist_ok (bool, optional): Whether to overwrite existing contents during unzipping.
+
+    Examples:
+        >>> download("https://ultralytics.com/assets/example.zip", dir="path/to/dir", unzip=True)
+    """
+    raise RuntimeError("Network usage is disable in our ultralytics fork")

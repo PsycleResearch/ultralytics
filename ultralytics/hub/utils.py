@@ -3,10 +3,15 @@
 import os
 import threading
 import time
+from typing import Any
 
-import requests
-
-from ultralytics.utils import IS_COLAB, LOGGER, TQDM, TryExcept, colorstr
+from ultralytics.utils import (
+    IS_COLAB,
+    LOGGER,
+    TQDM,
+    TryExcept,
+    colorstr,
+)
 
 HUB_API_ROOT = os.environ.get("ULTRALYTICS_HUB_API", "https://api.ultralytics.com")
 HUB_WEB_ROOT = os.environ.get("ULTRALYTICS_HUB_WEB", "https://hub.ultralytics.com")
@@ -15,7 +20,7 @@ PREFIX = colorstr("Ultralytics HUB: ")
 HELP_MSG = "If this issue persists please visit https://github.com/ultralytics/hub/issues for assistance."
 
 
-def request_with_credentials(url: str) -> any:
+def request_with_credentials(url: str) -> Any:
     """
     Make an AJAX request with cookies attached in a Google Colab environment.
 
@@ -56,7 +61,7 @@ def request_with_credentials(url: str) -> any:
     return output.eval_js("_hub_tmp")
 
 
-def requests_with_progress(method, url, **kwargs):
+def requests_with_progress(method: str, url: str, **kwargs):
     """
     Make an HTTP request using the specified method and URL, with an optional progress bar.
 
@@ -73,6 +78,8 @@ def requests_with_progress(method, url, **kwargs):
           content length.
         - If 'progress' is a number then progress bar will display assuming content length = progress.
     """
+    import requests  # scoped as slow import
+
     progress = kwargs.pop("progress", False)
     if not progress:
         return requests.request(method, url, **kwargs)
@@ -95,14 +102,14 @@ def requests_with_progress(method, url, **kwargs):
 
 
 def smart_request(
-    method,
-    url,
-    retry=3,
-    timeout=30,
-    thread=True,
-    code=-1,
-    verbose=True,
-    progress=False,
+    method: str,
+    url: str,
+    retry: int = 3,
+    timeout: int = 30,
+    thread: bool = True,
+    code: int = -1,
+    verbose: bool = True,
+    progress: bool = False,
     **kwargs,
 ):
     """
@@ -120,7 +127,8 @@ def smart_request(
         **kwargs (Any): Keyword arguments to be passed to the requests function specified in method.
 
     Returns:
-        (requests.Response): The HTTP response object. If the request is executed in a separate thread, returns None.
+        (requests.Response | None): The HTTP response object. If the request is executed in a separate thread, returns
+            None.
     """
     retry_codes = (408, 500)  # retry only these codes
 

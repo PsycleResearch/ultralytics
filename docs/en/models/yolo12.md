@@ -38,7 +38,7 @@ YOLO12 introduces an attention-centric architecture that departs from the tradit
 - **Enhanced Efficiency**: Achieves higher accuracy with fewer parameters compared to many prior models, demonstrating an improved balance between speed and accuracy.
 - **Flexible Deployment**: Designed for deployment across diverse platforms, from edge devices to cloud infrastructure.
 
-![YOLO12 comparison visualization](https://github.com/user-attachments/assets/8009d90f-b43c-4a96-bb89-47ef843e7144)
+![YOLO12 comparison visualization](https://github.com/ultralytics/docs/releases/download/0/yolo12-comparison-visualization.avif)
 
 ## Supported Tasks and Modes
 
@@ -113,19 +113,16 @@ The examples below focus on YOLO12 [Detect](../tasks/detect.md) models (for obje
 ## Key Improvements
 
 1. **Enhanced [Feature Extraction](https://www.ultralytics.com/glossary/feature-extraction)**:
-
     - **Area Attention**: Efficiently handles large [receptive fields](https://www.ultralytics.com/glossary/receptive-field), reducing computational cost.
     - **Optimized Balance**: Improved balance between attention and feed-forward network computations.
     - **R-ELAN**: Enhances feature aggregation using the R-ELAN architecture.
 
 2. **Optimization Innovations**:
-
     - **Residual Connections**: Introduces residual connections with scaling to stabilize training, especially in larger models.
     - **Refined Feature Integration**: Implements an improved method for feature integration within R-ELAN.
     - **FlashAttention**: Incorporates FlashAttention to reduce memory access overhead.
 
 3. **Architectural Efficiency**:
-
     - **Reduced Parameters**: Achieves a lower parameter count while maintaining or improving accuracy compared to many previous models.
     - **Streamlined Attention**: Uses a simplified attention implementation, avoiding positional encoding.
     - **Optimized MLP Ratios**: Adjusts MLP ratios to more effectively allocate computational resources.
